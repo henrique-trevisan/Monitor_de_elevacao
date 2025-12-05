@@ -134,10 +134,55 @@ class ConfigScreen(ctk.CTkFrame):
         super().__init__(parent)
         self.controller = controller
 
-        # basic layout only for visual test
-        title = ctk.CTkLabel(self, text="Settings screen", font=("Arial", 24))
-        title.pack(pady=20)
+        # ---------------------------------------------
+        # -- Screen variables
+        # ---------------------------------------------
 
+        self.file_path_var = ctk.StringVar(value="")
+        self.num_devices_var = ctk.StringVar(value="1")  # Number of circuit brakers
+        self.num_poles_var = ctk.StringVar(value="1")  # Number of poles per device
+
+        # ---------------------------------------------
+        # -- Grid basic layout
+        # ---------------------------------------------
+        # Row 0: upper bar (title + template buttons)
+        # Row 1: file selection
+        # Row 2: devices + poles combo boxes
+        # Row 3: dynamic tables
+        # Row 4: limit cards
+        # Row 5: change screen button
+
+        # Dynamic tables can grow in height but not the limit cards
+        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+
+        # ---------------------------------------------
+        # -- Upper bar
+        # ---------------------------------------------
+
+        top_bar = ctk.CTkFrame(self)
+        top_bar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+        top_bar.grid_rowconfigure(0, weight=1)
+
+        title = ctk.CTkLabel(top_bar, text="Settings", font=("Arial", 36))
+        title.grid(row=0, column=0, sticky="w")
+
+        btn_load_template = ctk.CTkButton(
+            top_bar,
+            text="Load template",
+            command=self.load_template_stub,
+            width=120
+        )
+        btn_load_template.grid(row=0, column=1, padx=5, sticky="e")
+
+        btn_save_template = ctk.CTkButton(
+            top_bar,
+            text="Save template",
+            command=self.save_template_stub,
+            width=120
+        )
+        btn_save_template.grid(row=0, column=2, padx=5, sticky="e")
 
         info = ctk.CTkLabel(
             self,
@@ -152,7 +197,7 @@ class ConfigScreen(ctk.CTkFrame):
             ),
             justify="left",
         )
-        info.pack(pady=10)
+        info.grid(row=1, column=0, pady=10)
 
         # Button to start monitoring
         btn_go_monitor = ctk.CTkButton(
@@ -160,7 +205,13 @@ class ConfigScreen(ctk.CTkFrame):
             text="Start monitoring",
             command=lambda: controller.show_frame("MonitorScreen")
         )
-        btn_go_monitor.pack(pady=20, side="bottom")
+        btn_go_monitor.grid(row=3, column=0, pady=20, sticky="s")
+    
+    def load_template_stub(self) -> None:
+        ...
+
+    def save_template_stub(self) -> None:
+        ...
 
 class MonitorScreen(ctk.CTkFrame):
 

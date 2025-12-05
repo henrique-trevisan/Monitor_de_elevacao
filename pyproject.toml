@@ -1,0 +1,34 @@
+# Roda com:
+# pip install -e .
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "temperature-monitor"
+version = "0.1.0"
+description = "App to monitor the temperature rise test for mini circuit breakers, indicating when the temperature have stabilized."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Henrique Trevisan", email = "trehen30@gmail.com" }
+]
+dependencies = [
+  "customtkinter",
+  "pystray",
+  "Pillow",
+  "pandas",
+]
+
+# Here, we set a console command
+# When the package is installed, a exe
+# will call monitor_de_elevacao.app:run
+[project.scripts]
+temperature-monitor = "monitor_de_elevacao.app:run"
+
+[tool.setuptools.packages.find]
+include = ["monitor_de_elevacao*"]
+
+[tool.setuptools.package-data]
+"monitor_de_elevacao" = ["assets/*"]

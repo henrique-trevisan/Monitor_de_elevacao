@@ -1,0 +1,11 @@
+# Python folders
+venv
+__pycache__
+*.egg-info
+
+# Test project
+*monitor_tray*
+
+# Test data
+tests/assets
+*.csv

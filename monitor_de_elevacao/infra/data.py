@@ -7,6 +7,9 @@ import queue
 # ---------------------------------------------
 
 # GUI variables
+max_devices = 3
+max_poles = 4
+other_measures_names = ["Left side", "Right side", "Front", "Handle"]
 user_input_variables: dict = {
     "target": "worker",
     "job": "validate_inputs",

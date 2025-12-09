@@ -32,8 +32,7 @@ class ConfigScreen(ctk.CTkFrame):
         # Row 5: change screen button
 
         # Dynamic tables can grow in height but not the limit cards
-        self.grid_rowconfigure(3, weight=2)
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         # ---------------------------------------------
@@ -65,10 +64,18 @@ class ConfigScreen(ctk.CTkFrame):
         btn_save_template.grid(row=0, column=3, padx=5, sticky="e")
 
         # ---------------------------------------------
+        # -- Main scrollable frame
+        # ---------------------------------------------
+
+        main_frame = ctk.CTkScrollableFrame(self)
+        main_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        main_frame.grid_columnconfigure(0, weight=1)
+
+        # ---------------------------------------------
         # -- 1) File selection section
         # ---------------------------------------------
 
-        file_frame = ctk.CTkFrame(self)
+        file_frame = ctk.CTkFrame(main_frame)
         file_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
         file_frame.grid_columnconfigure(1, weight=1)
 
@@ -89,7 +96,7 @@ class ConfigScreen(ctk.CTkFrame):
         # -- 2) Devices and poles combo boxes
         # ---------------------------------------------
 
-        combo_frame = ctk.CTkFrame(self)
+        combo_frame = ctk.CTkFrame(main_frame)
         combo_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
         combo_frame.grid_columnconfigure((1, 3, 5, 7), weight=1)
 
@@ -138,7 +145,7 @@ class ConfigScreen(ctk.CTkFrame):
         # -- 3) Dynamic tables
         # ---------------------------------------------
 
-        self.tables_area = ctk.CTkFrame(self, border_width=1, corner_radius=8)
+        self.tables_area = ctk.CTkFrame(main_frame, border_width=1, corner_radius=8)
         self.tables_area.grid(row=3, column=0, sticky="new", padx=10, pady=5)
 
         # Internal container only for the tables (avoiding mixing grid/pack)
@@ -149,7 +156,7 @@ class ConfigScreen(ctk.CTkFrame):
         # -- 4) Limit cards
         # ---------------------------------------------
 
-        self.limits_area = ctk.CTkFrame(self, border_width=1, corner_radius=8)
+        self.limits_area = ctk.CTkFrame(main_frame, border_width=1, corner_radius=8)
         self.limits_area.grid(row=4, column=0, sticky="new", padx=10, pady=5)
         self.limits_area.grid_columnconfigure(0, weight=1)
 

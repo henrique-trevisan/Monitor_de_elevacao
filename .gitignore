@@ -9,3 +9,6 @@ __pycache__
 # Test data
 tests/assets
 *.csv
+
+# VSCode files
+.vscode

@@ -1,5 +1,6 @@
 from .device_config_table import DeviceConfigTable
 from .limit_card import LimitCard
+from tkinter import filedialog
 import customtkinter as ctk
 from ..infra import data
 
@@ -199,6 +200,7 @@ class ConfigScreen(ctk.CTkFrame):
     
     def load_template_stub(self) -> None:
         print("Load template")
+        print(self.get_config_snapshot())
 
     def save_template_stub(self) -> None:
         print("Save template")
@@ -291,3 +293,55 @@ class ConfigScreen(ctk.CTkFrame):
             row = (i-1) // self.max_card_per_row
             col = (i-1) % self.max_card_per_row
             card.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+    
+    def get_config_snapshot(self) -> dict:
+        """
+        Read all GUI fields and return a pure python representation
+        of the current configuration.
+        """
+
+        # 1) Basic values
+        file_path = self.file_path_var.get().strip()
+        
+        try:
+            num_devices = int(self.num_devices_var.get())
+        except ValueError:
+            num_devices = 0
+        
+        try:
+            num_poles = int(self.num_poles_var.get())
+        except ValueError:
+            num_poles = 0
+
+        ambient_channels = [
+            self.amb_tmp_1.get().strip(),
+            self.amb_tmp_2.get().strip()
+        ]
+
+        # 2) Devices
+        devices: list[dict] = []
+        for index, device in enumerate(self.device_tables, start=1):
+            channels = device.get_channels()
+            devices.append(
+                {
+                    "index": index,
+                    "channels": channels
+                }
+            )
+        
+        # 3) Limits
+        limits = [card.to_dict() for card in self.limit_cards]
+
+        # 4) Create a full snapshot
+        snapshot = {
+            "file_path": file_path,
+            "ambient":{
+                "channels": ambient_channels,
+            },
+            "num_devices": num_devices,
+            "num_poles": num_poles,
+            "devices": devices,
+            "limits": limits,
+        }
+
+        return snapshot

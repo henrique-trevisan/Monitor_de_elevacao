@@ -47,6 +47,21 @@ class LimitCard(ctk.CTkFrame):
         btn_delete.grid(row=5, column=0, padx=5, pady=(10, 5), sticky="ew")
 
     def set_index(self, new_index: int) -> None:
+        """
+        Update the index of this limit card
+        """
 
         self.index = new_index
         self.lbl_title.configure(text=f"Limit #{self.index}")
+
+    def to_dict(self) -> dict:
+        """
+        Export this limit card as a simple dictionary
+        """
+        name = self.name_var.get().strip()
+        value_str = self.value_var.get().strip()
+
+        return {
+            "name": name,
+            "value": value_str
+        }

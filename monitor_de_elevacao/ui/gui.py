@@ -1,6 +1,6 @@
-from tkinter import filedialog, messagebox
 from .monitor_screen import MonitorScreen
 from .config_screen import ConfigScreen
+from tkinter import messagebox
 import customtkinter as ctk
 from ..infra import data
 import queue

@@ -42,3 +42,15 @@ class DeviceConfigTable(ctk.CTkFrame):
             entry = ctk.CTkEntry(self)
             entry.grid(row=1, column=channel, padx=5, pady=5, sticky="ew")
             self.channel_entries.append(entry)
+        
+    def get_channels(self) -> list[str]:
+        """
+        Return all the channels configured for this device,
+        in the same order they were used to build the table.
+        """
+
+        values: list[str] = []
+        for entry in self.channel_entries:
+            values.append(entry.get().strip())
+            
+        return values

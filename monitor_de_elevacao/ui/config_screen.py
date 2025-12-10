@@ -1,3 +1,4 @@
+from ..infra.persistence_file import PersistenceFile
 from .device_config_table import DeviceConfigTable
 from ..infra.config_adapter import ConfigAdapter
 from .limit_card import LimitCard
@@ -24,15 +25,27 @@ class ConfigScreen(ctk.CTkFrame):
         self.limit_cards: list[LimitCard] = []  # List with each limit card
         self.max_card_per_row = 6  # Maximum number of limit cards per row
 
-        # ---------------------------------------------
-        # -- Grid basic layout
-        # ---------------------------------------------
-        # Row 0: upper bar (title + template buttons)
-        # Row 1: file selection
-        # Row 2: devices + poles combo boxes
-        # Row 3: dynamic tables
-        # Row 4: limit cards
-        # Row 5: change screen button
+        # Instantiate the persistance class
+        self.persistance = PersistenceFile()
+
+        # Build the config window
+        self.build_widgets()
+
+        # Create the initial tables
+        self.rebuild_device_tables()
+
+    def build_widgets(self) -> None:
+        """
+        ---------------------------------------------
+        -- Grid basic layout
+        ---------------------------------------------
+        Row 0: upper bar (title + template buttons)
+        Row 1: file selection
+        Row 2: devices + poles combo boxes
+        Row 3: dynamic tables
+        Row 4: limit cards
+        Row 5: change screen button
+        """
 
         # Dynamic tables can grow in height but not the limit cards
         self.grid_rowconfigure(1, weight=1)
@@ -193,16 +206,35 @@ class ConfigScreen(ctk.CTkFrame):
             command=self.on_start_monitoring
         )
         btn_go_monitor.grid(row=5, column=0, pady=10)
-
-        # Create the initial tables
-        self.rebuild_device_tables()
     
     def load_template_stub(self) -> None:
-        print("Load template")
-        print(self.get_config_snapshot())
+        """
+        Let the user select a template file to load
+        """
+
+        # Opens the file
+        snapshot = self.persistance.load_snapshot()
+        if snapshot is None:
+            print("No template file found.")
+            return
+        
+        # Updates the data snapshot and apply it
+        data.last_config_snapshot = snapshot
+        self.apply_snapshot(snapshot=snapshot)
+        print("Template loaded from persistence file.")
 
     def save_template_stub(self) -> None:
-        print("Save template")
+        """
+        Get the current inputs to save as a template.
+            - Take a snapshot of the current input
+            - Validate the inputs
+            - Get the output file directory and file name
+            - Save the snapshot
+        """
+
+        data.last_config_snapshot = self.get_config_snapshot()
+        self.persistance.save_snapshot(data.last_config_snapshot)
+        print("Template saved to persistence file.")
     
     def select_file(self) -> None:
         """
@@ -344,6 +376,85 @@ class ConfigScreen(ctk.CTkFrame):
         }
 
         return snapshot
+    
+    def apply_snapshot(self, snapshot: dict) -> None:
+        """
+        Apply a previously saved snapshot into this GUI:
+            - 1) File path
+            - 2) Ambient channels
+            - 3) Number of devices/poles
+            - 4) Device tables (channels)
+            - 5) Limit cards
+        """
+
+        # 1) File path
+        file_path = snapshot.get("file_path", "")
+        self.file_path_var.set(file_path)
+
+        # 2) Ambient channels
+        ambient = snapshot.get("ambient", {})
+        channels = ambient.get("channels", [])
+
+        # Clear and set ambient entries
+        self.amb_tmp_1.delete(0, "end")
+        self.amb_tmp_2.delete(0, "end")
+
+        # If the channel exists, update the entry
+        if len(channels) >= 1 and channels[0]:
+            self.amb_tmp_1.insert(0, channels[0])
+        if len(channels) >= 2 and channels[1]:
+            self.amb_tmp_2.insert(0, channels[1])
+
+        # 3) Number of devices and poles
+        num_devices = snapshot.get("num_devices", None)
+        num_poles = snapshot.get("num_poles", None)
+
+        if num_devices is not None:
+            self.num_devices_var.set(str(num_devices))
+            self.combo_devices.set(str(num_devices))
+
+        if num_poles is not None:
+            self.num_poles_var.set(str(num_poles))
+            self.combo_poles.set(str(num_poles))
+
+        # Rebuild device tables with the new numbers
+        self.rebuild_device_tables()
+
+        # 4) Fill the device channels
+        devices_snapshot = snapshot.get("devices", [])
+        for device in devices_snapshot:
+            index = device.get("index", 0)
+            channels = device.get("channels", [])
+            if 1 <= index <= len(self.device_tables):
+                self.device_tables[index - 1].set_channels(channels=channels)
+        
+        # 5) Rebuild limit cards
+        limits_snapshot = snapshot.get("limits", [])
+
+        # Destroy the old cards
+        for card in self.limit_cards:
+            card.destroy()
+        self.limit_cards.clear()
+
+        # Create and fill new cards
+        for limit in limits_snapshot:
+            name = (limit.get("name") or "").strip()
+            value = (str(limit.get("value")) or "").strip()
+            
+            # Create a new data card
+            card = LimitCard(
+                parent=self.limits_container,
+                index=len(self.limit_cards)+1,
+                on_delete=self.remove_limit_card,
+            )
+            card.set_values(name=name, value=value)
+
+            # Include in the data card list
+            self.limit_cards.append(card)
+        
+        # Re-grid cards according to current list
+        self.replace_limit_cards()
+
 
     def on_start_monitoring(self):
         """
@@ -361,6 +472,10 @@ class ConfigScreen(ctk.CTkFrame):
 
         # Validate the inputs
         self.config_adapter.ask_queue_to_validate(snapshot=data.last_config_snapshot)
+
+        # Save snapshot to persistance
+        self.persistance.save_snapshot(data.last_config_snapshot)
+
 
         # Read the status
         # To do: read the queue where the target is on_start_monitoring and get the status

@@ -54,3 +54,13 @@ class DeviceConfigTable(ctk.CTkFrame):
             values.append(entry.get().strip())
             
         return values
+    
+    def set_channels(self, channels: list[str]) -> None:
+        """
+        Set the entries with the given channels list.
+        Extra channels are ignored and missing ones stay blank
+        """
+        
+        for entry, value in zip(self.channel_entries, channels):
+            entry.delete(0, "end")
+            entry.insert(0, value)

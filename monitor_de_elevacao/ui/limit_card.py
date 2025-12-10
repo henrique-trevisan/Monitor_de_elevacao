@@ -65,3 +65,11 @@ class LimitCard(ctk.CTkFrame):
             "name": name,
             "value": value_str
         }
+    
+    def set_values(self, name: str, value: str) -> None:
+        """
+        Fill the card with the name and the value as strings
+        """
+
+        self.name_var.set(name)
+        self.value_var.set(str(value))

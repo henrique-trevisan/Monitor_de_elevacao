@@ -1,3 +1,4 @@
+from ..infra.persistence_file import PersistenceFile
 from .monitor_screen import MonitorScreen
 from .config_screen import ConfigScreen
 from tkinter import messagebox
@@ -35,6 +36,9 @@ class App(ctk.CTk):
         # Attach the close button to the withdrow action
         self.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
+        # Instantiate the persistence directory and file
+        self.persistence = PersistenceFile()
+
         # Create and register the screens
         self._init_frames()
 
@@ -51,11 +55,23 @@ class App(ctk.CTk):
         """
         Create the tables and register in the dictionary
         """
+        
         for FrameClass in (ConfigScreen, MonitorScreen):
             frame = FrameClass(parent=self.root, controller=self)  # Instantiates the screen
             name = FrameClass.__name__  # Get the name for the screen
             self._frames[name] = frame  # Saves in the dictionary
             frame.grid(row=0, column=0, sticky="nsew")  # Exibits in the frame
+        
+        # After the frames are created, try to load the persisted config
+        snapshot = self.persistence.load_snapshot()
+        if snapshot is None:
+            print("No persistence file found.")
+            return
+
+        data.last_config_snapshot = snapshot
+        config_frame = self._frames.get("ConfigScreen")
+        if config_frame is not None:
+            config_frame.apply_snapshot(snapshot)
     
     def show_frame(self, name: str) -> None:
         """

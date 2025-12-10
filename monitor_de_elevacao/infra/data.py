@@ -10,6 +10,7 @@ import queue
 max_devices = 3
 max_poles = 4
 other_measures_names = ["Left side", "Right side", "Front", "Handle"]
+last_config_snapshot: dict | None = None
 user_input_variables: dict = {
     "target": "worker",
     "job": "validate_inputs",

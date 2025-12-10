@@ -1,4 +1,5 @@
 from .device_config_table import DeviceConfigTable
+from ..infra.config_adapter import ConfigAdapter
 from .limit_card import LimitCard
 from tkinter import filedialog
 import customtkinter as ctk
@@ -10,6 +11,7 @@ class ConfigScreen(ctk.CTkFrame):
         
         super().__init__(parent)
         self.controller = controller
+        self.config_adapter = ConfigAdapter()
 
         # ---------------------------------------------
         # -- Screen variables
@@ -188,15 +190,12 @@ class ConfigScreen(ctk.CTkFrame):
         btn_go_monitor = ctk.CTkButton(
             self,
             text="Start monitoring",
-            command=lambda: controller.show_frame("MonitorScreen")
+            command=self.on_start_monitoring
         )
         btn_go_monitor.grid(row=5, column=0, pady=10)
 
         # Create the initial tables
         self.rebuild_device_tables()
-
-        # Create a first limit card by default
-        self.add_limit_card()
     
     def load_template_stub(self) -> None:
         print("Load template")
@@ -345,3 +344,31 @@ class ConfigScreen(ctk.CTkFrame):
         }
 
         return snapshot
+
+    def on_start_monitoring(self):
+        """
+        Called when user clicks 'Start monitoring':
+            - Reads the current GUI configuration (snapshot)
+            - User ConfigAdapter to build payload and push to queue
+            - Stores the snapshot globally
+            - Validates the inputs
+            - If there are any errors, show the errors
+            - If everything is ok, start to monitoring
+        """
+
+        # Read all the current inputs
+        data.last_config_snapshot = self.get_config_snapshot()
+
+        # Validate the inputs
+        self.config_adapter.ask_queue_to_validate(snapshot=data.last_config_snapshot)
+
+        # Read the status
+        # To do: read the queue where the target is on_start_monitoring and get the status
+
+        # # Operation
+        # if status["status"] == "valid":
+        #     controller.show_frame("MonitorScreen")
+        # else:
+        #     # To do: rise a pop up to show the list of errors in status["payload"]: list[str]
+        #     ...
+        self.controller.show_frame("MonitorScreen")

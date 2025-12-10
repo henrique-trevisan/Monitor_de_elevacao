@@ -68,6 +68,10 @@ class App(ctk.CTk):
         data.monitoring = True if name == "MonitorScreen" else False
 
         frame.tkraise()
+
+        # If the frame has the attribute 'on_show', execute it
+        if hasattr(frame, 'on_show'):
+            frame.on_show()
     
         # Update the picture of the icon and the menu
         data.icon.icon = data.icon_monitoring if data.monitoring else data.icon_awaiting

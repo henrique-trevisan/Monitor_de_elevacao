@@ -8,7 +8,7 @@ from . import data
 class ConfigAdapter:
     """
     Responsible for:
-        - Convert the GUI snapshot for the payload expected by the worker.
+        - Convert the GUI snapshot for the payload format expected by the worker.
         - Pushes tasks to the data queue
     """
 

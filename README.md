@@ -1,59 +1,78 @@
 # Temperature Monitor
 
-Temperature Monitor is an application designed to monitor the temperature rise test for mini circuit breakers. It indicates when the temperature has stabilized, helping users efficiently track and record test results.
+Temperature Monitor is a desktop application for automating temperature-rise tests of mini circuit breakers. It collects and processes temperature measurements, detects when temperature stabilizes, and helps operators record and export results.
 
-## Features
-- Real-time temperature monitoring
-- Automatic detection of temperature stabilization
-- User-friendly graphical interface (GUI)
-- System tray integration for easy access
-- Data cleaning and processing pipeline
-- CSV data handling
+## Key Features
+
+- Real-time temperature plotting and monitoring
+- Automatic detection of temperature stabilization events
+- CSV import/export and data cleaning pipeline
+- System tray integration for lightweight background operation
+- Threaded worker for long-running processing without blocking the GUI
+
+## Requirements
+
+- Python 3.10 or newer
+- Recommended: create and use a virtual environment
 
 ## Installation
 
-### Requirements
-- Python 3.10 or higher
-- pip
+Install dependencies from `requirements.txt`:
 
-### Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Install as a package (editable mode)
+Install the package in editable mode for development:
+
 ```bash
 pip install -e .
 ```
 
-## Usage
+## Running the App
 
-After installation, you can run the application using the command:
+Run the installed CLI entry (after `pip install -e .`):
 
 ```bash
 temperature-monitor
 ```
 
-Alternatively, you can run directly from the source:
+Or run directly from source:
 
 ```bash
 python -m monitor_de_elevacao.app
 ```
 
+On Windows you can also run the tray app entry point at `monitor_tray.app` when relevant.
+
+## Configuration & Persistence
+
+User configuration (GUI snapshot) is saved as a JSON file in the user's Documents folder by the persistence layer. The adapter in `monitor_de_elevacao/infra/persistence_file.py` locates a suitable folder and stores `config.json` there. The saved snapshot is the source of truth for the GUI state.
+
 ## Project Structure
 
-```
+``` text
 monitor_de_elevacao/
 ├── app.py                # Main entry point
-├── core/                 # Core logic (calculations, cleaning, rules, tables, pipeline)
-├── infra/                # Infrastructure (data handling, file operations, worker)
-├── ui/                   # User interface (GUI, tray icon)
-└── assets/               # Static assets (images, etc.)
+├── core/                 # Pure business logic (calculations, cleaning, rules, pipeline)
+├── infra/                # Persistence, adapters, file handling, worker
+├── ui/                   # GUI screens, widgets and tray integration
+└── assets/               # Static assets (icons, images)
 ```
 
-## Development
+## Development & Tests
 
-To contribute or modify the project, clone the repository and install dependencies as described above. All main logic is organized under the `monitor_de_elevacao` package.
+Recommended workflow:
+
+1. Create a virtual environment: `python -m venv venv` and activate it.
+2. Install editable package and dev dependencies.
+3. Run unit tests with `pytest` (tests live in the `tests/` folder).
+
+The codebase follows a layered architecture: UI (screens and widgets) only exports/imports snapshots, `infra` adapts snapshots to worker payloads and handles persistence, and `core` contains pure functions for calculations and rules.
+
+## Contributing
+
+Contributions are welcome. Please open issues for bugs or feature requests, and submit pull requests with focused changes and tests for new logic.
 
 ## Author
 

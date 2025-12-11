@@ -7,6 +7,9 @@ import customtkinter as ctk
 from ..infra import data
 
 class ConfigScreen(ctk.CTkFrame):
+    """
+    Screen to set the configurations, mainly data logger channels and maximum temperature
+    """
     
     def __init__(self, parent: ctk.CTkFrame, controller) -> None:
         
@@ -15,7 +18,7 @@ class ConfigScreen(ctk.CTkFrame):
         self.config_adapter = ConfigAdapter()
 
         # ---------------------------------------------
-        # -- Screen variables
+        # -- Internal states
         # ---------------------------------------------
 
         self.file_path_var = ctk.StringVar(value="")
@@ -52,12 +55,11 @@ class ConfigScreen(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         # ---------------------------------------------
-        # -- 0) Upper bar (title + buttons)
+        # -- 0) Top bar (title + buttons)
         # ---------------------------------------------
 
         top_bar = ctk.CTkFrame(self)
         top_bar.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
-        top_bar.grid_rowconfigure(0, weight=1)
         top_bar.grid_columnconfigure(1, weight=1)
 
         title = ctk.CTkLabel(top_bar, text="Settings", font=("Arial", 36))

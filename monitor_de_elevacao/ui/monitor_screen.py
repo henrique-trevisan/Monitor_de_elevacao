@@ -1,3 +1,4 @@
+from .ambient_tables import AmbientTables, AmbientStatsTable
 import customtkinter as ctk
 from ..infra import data
 
@@ -68,30 +69,13 @@ class MonitorScreen(ctk.CTkFrame):
         self.ambient_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.ambient_frame.grid_columnconfigure((0, 1), weight=1)
 
-        # Left placeholder: Table with the ambient channels
-        self.ambient_table_placeholder = ctk.CTkLabel(
-            self.ambient_frame,
-            text=(
-                "Ambient tables will appear here:\n"
-                "\t- Channel 1, Channel 2, Mean\n"
-                "\t- One row per 10 min (6 rows)"
-            ),
-            justify="left"
-        )
-        self.ambient_table_placeholder.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
+        # Left: ambient table (channel and mean)
+        self.ambient_table = AmbientTables(self.ambient_frame, max_rows=6)
+        self.ambient_table.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
-        # Right placeholder: Table with max/min/delta temperature
-        self.ambient_stats_placeholder = ctk.CTkLabel(
-            self.ambient_frame,
-            text=(
-                "Ambient stats:\n"
-                "\t- Mean max\n"
-                "\t- Mean min\n"
-                "\t- Mean max - min"
-            ),
-            justify="left"
-        )
-        self.ambient_stats_placeholder.grid(row=0, column=1, sticky="ne", padx=5, pady=5)
+        # Right: ambient stats table (max/min/delta)
+        self.ambient_stats_table = AmbientStatsTable(self.ambient_frame)
+        self.ambient_stats_table.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         
         # -----
         # -- Devices section (one frame per device)
@@ -244,8 +228,22 @@ class MonitorScreen(ctk.CTkFrame):
             - limits status (max deltas)
         """
 
-        # Simplified example: only shows an update counter
+        # Debug: show update index
         count = payload.get("update_index", "?")
+
+        # Retrieve data from payload
+        ambient = payload.get("ambient", {})
+        rows = ambient.get("rows", [])
+        stats = ambient.get("stats", {})
+
+        # Update the ambient table
+        self.ambient_table.update_from_rows(rows)
+        self.ambient_stats_table.update_from_stats(stats)
+
+        # Update a small text summary
         self.summary_label.configure(
-            text=f"Monitoring data received (update #{count})."
+            text=(
+                f"Monitoring data received (update {count}).\n"
+                f"Ambient rows: {len(rows)}"
+            )
         )

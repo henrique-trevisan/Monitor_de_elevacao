@@ -1,4 +1,5 @@
 from .ambient_tables import AmbientTables, AmbientStatsTable
+from .device_monitor_table import DeviceMonitorGroup
 import customtkinter as ctk
 from ..infra import data
 
@@ -18,6 +19,7 @@ class MonitorScreen(ctk.CTkFrame):
 
         self.led_state: bool = False
         self.led_after_id: str | None = None
+        self.device_groups: list[DeviceMonitorGroup] = []
 
         # Build the monitor screen
         self.build_widgets()
@@ -240,6 +242,10 @@ class MonitorScreen(ctk.CTkFrame):
         self.ambient_table.update_from_rows(rows)
         self.ambient_stats_table.update_from_stats(stats)
 
+        # Update the devices
+        devices_payload = payload.get("devices", [])
+        self.rebuild_device_groups(devices_payload)
+
         # Update a small text summary
         self.summary_label.configure(
             text=(
@@ -247,3 +253,40 @@ class MonitorScreen(ctk.CTkFrame):
                 f"Ambient rows: {len(rows)}"
             )
         )
+
+    def rebuild_device_groups(self, devices_payload: list[dict]) -> None:
+        """
+        Reconstrói todas as tabelas de dispositivos a partir do payload.
+        Substitui o placeholder por uma tabela real quando existir dado.
+        """
+
+        # Remove todos os grupos antigos
+        for group in getattr(self, "device_groups", []):
+            group.destroy()
+        self.device_groups = []
+
+        if not devices_payload:
+            # Se não tem dispositivo no payload, mostra o placeholder
+            self.devices_placeholder.grid(row=0, column=0, sticky="w", padx=5, pady=5)
+            return
+
+        # Esconde o placeholder (sem destruir)
+        self.devices_placeholder.grid_forget()
+
+        # Para cada dispositivo recebido, cria um bloco
+        for row_idx, device_data in enumerate(devices_payload):
+            column_labels = device_data.get("column_labels", [])
+            device_index = device_data.get("device_index", row_idx + 1)
+
+            group = DeviceMonitorGroup(
+                parent=self.devices_frame,
+                device_index=device_index,
+                column_labels=column_labels,
+                max_rows=6,
+            )
+            group.grid(row=row_idx, column=0, sticky="ew", padx=5, pady=5)
+
+            # Preenche com dados desse dispositivo
+            group.update_from_payload(device_data)
+
+            self.device_groups.append(group)

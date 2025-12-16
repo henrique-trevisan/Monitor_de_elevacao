@@ -1,5 +1,6 @@
 from .ambient_tables import AmbientTables, AmbientStatsTable
 from .device_monitor_table import DeviceMonitorGroup
+from .limit_monitor_card import LimitMonitorCard
 import customtkinter as ctk
 from ..infra import data
 
@@ -101,24 +102,45 @@ class MonitorScreen(ctk.CTkFrame):
         self.devices_placeholder.grid(row=0, column=0, sticky="w", padx=5, pady=5)
 
         # -----
-        # -- Limits section
+        # -- Limits section (inside the scroll frame)
         # -----
 
         self.limits_frame = ctk.CTkFrame(self.scroll_frame)
-        self.limits_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        self.limits_frame.grid(
+            row=2, column=0, sticky="ew", padx=5, pady=5
+        )
         self.limits_frame.grid_columnconfigure(0, weight=1)
 
-        self.limits_placeholder = ctk.CTkLabel(
+        lbl_limits_title = ctk.CTkLabel(
             self.limits_frame,
-            text=(
-                "Limits section:\n"
-                "\t- One card per limit\n"
-                "\t- Show limit (\U00000394T) and max delta found\n"
-                "\t- Can aggregate per channel or across devices"
-            ),
-            justify="left"
+            text="Limits monitoring (ΔT)",
+            font=("Arial", 16, "bold"),
         )
-        self.limits_placeholder.grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        lbl_limits_title.grid(
+            row=0, column=0, sticky="w", padx=5, pady=(5, 2)
+        )
+
+        # Container that holds the cards (grid)
+        self.limits_container = ctk.CTkFrame(self.limits_frame)
+        self.limits_container.grid(
+            row=1, column=0, sticky="ew", padx=5, pady=(2, 10)
+        )
+        self.limits_container.grid_columnconfigure(0, weight=1)
+
+        # Placeholder for when there is no data yet
+        self.limits_placeholder = ctk.CTkLabel(
+            self.limits_container,
+            text="No limits data yet.",
+            justify="left",
+        )
+        self.limits_placeholder.grid(
+            row=0, column=0, sticky="w", padx=5, pady=5
+        )
+
+        # Internal state for limit cards
+        self.limit_cards: list[LimitMonitorCard] = []
+        self.max_limit_cards_per_row = 4
+
 
         # -----
         # -- Label summary (helps for development)
@@ -254,6 +276,19 @@ class MonitorScreen(ctk.CTkFrame):
             )
         )
 
+        limits_payload = payload.get("limits", [])
+        self.rebuild_limit_cards(limits_payload)
+
+        self.summary_label.configure(
+            text=(
+                f"Monitoring data received (update {count}).\n"
+                f"Ambient rows: {len(rows)}\n"
+                f"Devices: {len(devices_payload)}\n"
+                f"Limits: {len(limits_payload)}"
+            )
+        )
+
+
     def rebuild_device_groups(self, devices_payload: list[dict]) -> None:
         """
         Reconstrói todas as tabelas de dispositivos a partir do payload.
@@ -290,3 +325,42 @@ class MonitorScreen(ctk.CTkFrame):
             group.update_from_payload(device_data)
 
             self.device_groups.append(group)
+            
+
+    def rebuild_limit_cards(self, limits_payload: list[dict]) -> None:
+        """
+        Rebuild all limit monitor cards from the given payload.
+
+        Parameters
+        ----------
+        limits_payload : list[dict]
+            List of limit payload dictionaries, as produced by the worker.
+        """
+        # Destroy old cards
+        for card in self.limit_cards:
+            card.destroy()
+        self.limit_cards.clear()
+
+        # No limits data: show placeholder and return
+        if not limits_payload:
+            self.limits_placeholder.configure(text="No limits data.")
+            self.limits_placeholder.grid(
+                row=0, column=0, sticky="w", padx=5, pady=5
+            )
+            return
+
+        # Hide placeholder
+        self.limits_placeholder.grid_forget()
+
+        # Create cards and place them in a grid (row by row)
+        for idx, limit_data in enumerate(limits_payload, start=1):
+            card = LimitMonitorCard(self.limits_container, index=idx)
+            card.update_from_payload(limit_data)
+
+            row = (idx - 1) // self.max_limit_cards_per_row
+            col = (idx - 1) % self.max_limit_cards_per_row
+
+            card.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
+            self.limits_container.grid_columnconfigure(col, weight=1)
+
+            self.limit_cards.append(card)

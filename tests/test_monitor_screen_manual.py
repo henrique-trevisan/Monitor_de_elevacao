@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 # -------------------------------------------------------------------
-# Ajusta o sys.path para conseguir importar o pacote do projeto
+# Adjust sys.path so we can import the project package
 # -------------------------------------------------------------------
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
@@ -16,12 +16,14 @@ from monitor_de_elevacao.infra import data
 
 
 # -------------------------------------------------------------------
-# Helpers para construir payloads de teste
+# Helpers to build fake payloads for manual GUI testing
 # -------------------------------------------------------------------
+
 
 def build_fake_snapshot() -> dict:
     """
-    Snapshot mínimo só para o MonitorScreen.on_show() não quebrar.
+    Build a minimal configuration snapshot so that
+    MonitorScreen.on_show() can display a summary text.
     """
     return {
         "file_path": r"C:\fake\example.csv",
@@ -31,19 +33,87 @@ def build_fake_snapshot() -> dict:
         "num_devices": 2,
         "num_poles": 2,
         "devices": [],
-        "limits": [],
+        # Snapshot limits in the same style as ConfigScreen persistence
+        "limits": [
+            {"name": "Handle (device #1)", "value": 60.0},
+            {"name": "Left side (device #2)", "value": 50.0},
+        ],
     }
+
+
+def build_fake_limits_payload(devices_payload: list[dict]) -> list[dict]:
+    """
+    Build example limits payload based on the devices payload.
+
+    The idea is:
+    - create one 'ok' limit for Handle (device #1)
+    - create one 'exceeded' limit for Left side (device #2)
+    """
+    if not devices_payload:
+        return []
+
+    # We assume all devices share the same column_labels
+    base_labels = devices_payload[0].get("column_labels", [])
+    try:
+        handle_idx = base_labels.index("Handle")
+        left_idx = base_labels.index("Left side")
+    except ValueError:
+        # If labels are different for some reason, just skip limits
+        return []
+
+    def find_device(device_index: int) -> dict:
+        for dev in devices_payload:
+            if dev.get("device_index") == device_index:
+                return dev
+        raise ValueError(f"Device {device_index} not found in devices_payload")
+
+    dev1 = find_device(1)
+    dev2 = find_device(2)
+
+    # These are the maximum deltas already computed by the fake device payload
+    dev1_max_handle = dev1["result"]["max"][handle_idx]
+    dev2_max_left = dev2["result"]["max"][left_idx]
+
+    limits: list[dict] = []
+
+    # Limit that is NOT exceeded (status = ok)
+    limits.append(
+        {
+            "name": "Handle (device #1)",
+            "limit_value": dev1_max_handle + 5.0,  # above actual max
+            "max_delta": dev1_max_handle,
+            "status": "ok",
+            "scope": "device",
+            "device_index": 1,
+            "column_label": "Handle",
+        }
+    )
+
+    # Limit that IS exceeded (status = exceeded)
+    limits.append(
+        {
+            "name": "Left side (device #2)",
+            "limit_value": dev2_max_left - 0.5,  # below actual max
+            "max_delta": dev2_max_left,
+            "status": "exceeded",
+            "scope": "device",
+            "device_index": 2,
+            "column_label": "Left side",
+        }
+    )
+
+    return limits
 
 
 def build_fake_monitor_payload() -> dict:
     """
-    Payload de monitoramento com:
-      - 6 linhas de ambiente (t1, t2, mean)
-      - 2 dispositivos, 4 colunas cada
-    Compatível com o que MonitorScreen.update_from_payload espera.
+    Build a monitoring payload with:
+      - 6 ambient rows (t1, t2, mean)
+      - 2 devices, 4 columns each (readings/deltas/results)
+      - a list of limits, compatible with MonitorScreen.update_from_payload().
     """
 
-    # 1) Ambiente: 6 amostras
+    # 1) Ambient: 6 samples
     ambient_rows = []
     base_mean = 25.0
 
@@ -64,19 +134,22 @@ def build_fake_monitor_payload() -> dict:
         "mean_delta": mean_delta,
     }
 
-    # 2) Dispositivos: mesmo número de colunas para readings/deltas/result
+    # 2) Devices: same number of columns for readings / deltas / result
     column_labels = ["Upper pole 1", "Lower pole 1", "Left side", "Handle"]
     n_cols = len(column_labels)
 
     def make_device(device_index: int, offset: float) -> dict:
+        """
+        Build a fake device block based on ambient mean.
+        offset is used so that devices #1 and #2 differ slightly.
+        """
         readings: list[list[float]] = []
         deltas: list[list[float]] = []
 
-        # Usa a média ambiente só para gerar números coerentes
+        # Use ambient mean only to generate coherent numbers
         for i, row in enumerate(ambient_rows):
             mean = row["mean"]
 
-            # Cria temperaturas artificiais para cada coluna
             r_row: list[float] = []
             d_row: list[float] = []
             for j in range(n_cols):
@@ -86,7 +159,7 @@ def build_fake_monitor_payload() -> dict:
             readings.append(r_row)
             deltas.append(d_row)
 
-        # Calcula max/min/estab por coluna a partir dos deltas
+        # Compute max / min / estab per column from deltas
         max_vals: list[float] = []
         min_vals: list[float] = []
         estab_vals: list[float] = []
@@ -117,25 +190,38 @@ def build_fake_monitor_payload() -> dict:
         make_device(device_index=2, offset=1.0),
     ]
 
+    # 3) Limits, built using the device result data
+    limits_payload = build_fake_limits_payload(devices_payload)
+
     monitor_payload = {
         "update_index": 1,
+        "status": {
+            "mode": "waiting",
+            "elapsed_minutes": 120.0,
+            "required_minutes": 240.0,
+        },
         "ambient": {
             "rows": ambient_rows,
             "stats": ambient_stats,
         },
         "devices": devices_payload,
-        # "limits": [...]  # vai ser usado depois; por ora é opcional
+        "limits": limits_payload,
     }
 
     return monitor_payload
 
 
 # -------------------------------------------------------------------
-# Função principal de teste manual
+# Manual test entry point
 # -------------------------------------------------------------------
 
+
 def main() -> None:
-    # Configuração básica do customtkinter
+    """
+    Run a manual GUI test for MonitorScreen:
+    - creates a fake configuration snapshot
+    - sends a single fake monitoring payload after 500 ms
+    """
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("dark-blue")
 
@@ -143,31 +229,30 @@ def main() -> None:
     root.title("MonitorScreen manual test")
     root.geometry("1200x800")
 
-    # Prepara o "controller" mínimo que a MonitorScreen espera
+    # Minimal controller implementation (MonitorScreen expects a controller)
     class DummyController:
         def show_frame(self, name: str) -> None:
             print(f"DummyController.show_frame({name}) called")
 
     controller = DummyController()
 
-    # Cria a tela de monitoramento
+    # Create the monitoring screen
     screen = MonitorScreen(parent=root, controller=controller)
     screen.grid(row=0, column=0, sticky="nsew")
     root.grid_rowconfigure(0, weight=1)
     root.grid_columnconfigure(0, weight=1)
 
-    # Deixa o sistema em modo "monitoring" para o LED piscar
+    # Leave the system in monitoring mode so the LED will blink
     data.monitoring = True
 
-    # Snapshot mínimo só para o on_show() montar o resumo
+    # Minimal snapshot so on_show() can build the summary text
     data.last_config_snapshot = build_fake_snapshot()
 
-    # Chama o hook de exibição
+    # Call on_show hook
     screen.on_show()
 
-    # Agenda a atualização com o payload fake
+    # Schedule a monitoring payload after a short delay (simulate worker queue)
     fake_payload = build_fake_monitor_payload()
-    # usa after só para simular a ideia de "chegou algo pela fila"
     root.after(500, lambda: screen.update_from_payload(fake_payload))
 
     root.mainloop()

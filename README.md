@@ -51,13 +51,13 @@ User configuration (GUI snapshot) is saved as a JSON file in the user's Document
 
 ## Project Structure
 
-``` text
+```text
 monitor_de_elevacao/
-├── app.py                # Main entry point
-├── core/                 # Pure business logic (calculations, cleaning, rules, pipeline)
-├── infra/                # Persistence, adapters, file handling, worker
-├── ui/                   # GUI screens, widgets and tray integration
-└── assets/               # Static assets (icons, images)
+|-- app.py                # Main entry point
+|-- core/                 # Pure business logic (calculations, cleaning, rules, pipeline)
+|-- infra/                # Persistence, adapters, file handling, worker
+|-- ui/                   # GUI screens, widgets and tray integration
+`-- assets/               # Static assets (icons, images)
 ```
 
 ## Development & Tests
@@ -65,10 +65,10 @@ monitor_de_elevacao/
 Recommended workflow:
 
 1. Create a virtual environment: `python -m venv venv` and activate it.
-2. Install editable package and dev dependencies.
+2. Install the editable package and dependencies.
 3. Run unit tests with `pytest` (tests live in the `tests/` folder).
 
-The codebase follows a layered architecture: UI (screens and widgets) only exports/imports snapshots, `infra` adapts snapshots to worker payloads and handles persistence, and `core` contains pure functions for calculations and rules.
+The codebase follows a layered architecture: UI (screens and widgets) exports/imports snapshots, `infra` adapts snapshots to worker payloads and handles persistence, and `core` contains pure functions for calculations and rules.
 
 ## Contributing
 
@@ -80,4 +80,6 @@ Henrique Trevisan (<trehen30@gmail.com>)
 
 ## License
 
-To be defined.
+Commercial use of this project is allowed only if the user contributes code back to this project.
+
+This is a custom usage condition described in this README (not a standard open-source license).

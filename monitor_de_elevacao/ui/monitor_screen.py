@@ -1,6 +1,7 @@
 from .ambient_tables import AmbientTables, AmbientStatsTable
 from .device_monitor_table import DeviceMonitorGroup
 from .limit_monitor_card import LimitMonitorCard
+from .status_banner import MonitoringStatusBanner
 import customtkinter as ctk
 from ..infra import data
 
@@ -65,11 +66,21 @@ class MonitorScreen(ctk.CTkFrame):
         self.scroll_frame.grid_columnconfigure(0, weight=1)
 
         # -----
+        # -- Status banner (row 0 inside scroll)
+        # -----
+
+        self.status_banner = MonitoringStatusBanner(
+            self.scroll_frame,
+            on_force_tracking=self.on_force_tracking,
+        )
+        self.status_banner.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+
+        # -----
         # -- Ambient section
         # -----
 
         self.ambient_frame = ctk.CTkFrame(self.scroll_frame)
-        self.ambient_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        self.ambient_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         self.ambient_frame.grid_columnconfigure((0, 1), weight=1)
 
         # Left: ambient table (channel and mean)
@@ -85,7 +96,7 @@ class MonitorScreen(ctk.CTkFrame):
         # -----
 
         self.devices_frame = ctk.CTkFrame(self.scroll_frame)
-        self.devices_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+        self.devices_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
         self.devices_frame.grid_columnconfigure(0, weight=1)
 
         # Devices placeholder
@@ -107,7 +118,7 @@ class MonitorScreen(ctk.CTkFrame):
 
         self.limits_frame = ctk.CTkFrame(self.scroll_frame)
         self.limits_frame.grid(
-            row=2, column=0, sticky="ew", padx=5, pady=5
+            row=3, column=0, sticky="ew", padx=5, pady=5
         )
         self.limits_frame.grid_columnconfigure(0, weight=1)
 
@@ -151,7 +162,7 @@ class MonitorScreen(ctk.CTkFrame):
             text="No monitoring data yet.",
             justify="left"
         )
-        self.summary_label.grid(row=3, column=0, sticky="w", padx=5, pady=5)
+        self.summary_label.grid(row=4, column=0, sticky="w", padx=5, pady=5)
 
         # ---------------------------------------------
         # -- Row 2) Button to stop monitoring
@@ -247,38 +258,33 @@ class MonitorScreen(ctk.CTkFrame):
         """
         This method will be called by the worker thread via queue
         with a monitoring payload that already contains:
+            - status (waiting/monitoring/alert, times)
             - ambient data (6 rows, stats)
             - per-device readings/deltas/results
             - limits status (max deltas)
         """
-
-        # Debug: show update index
         count = payload.get("update_index", "?")
 
-        # Retrieve data from payload
+        # --- NEW: status banner ---
+        status_payload = payload.get("status")
+        self.status_banner.update_from_status(status_payload)
+
+        # Ambient
         ambient = payload.get("ambient", {})
         rows = ambient.get("rows", [])
         stats = ambient.get("stats", {})
-
-        # Update the ambient table
         self.ambient_table.update_from_rows(rows)
         self.ambient_stats_table.update_from_stats(stats)
 
-        # Update the devices
+        # Devices
         devices_payload = payload.get("devices", [])
         self.rebuild_device_groups(devices_payload)
 
-        # Update a small text summary
-        self.summary_label.configure(
-            text=(
-                f"Monitoring data received (update {count}).\n"
-                f"Ambient rows: {len(rows)}"
-            )
-        )
-
+        # Limits
         limits_payload = payload.get("limits", [])
         self.rebuild_limit_cards(limits_payload)
 
+        # Summary text
         self.summary_label.configure(
             text=(
                 f"Monitoring data received (update {count}).\n"
@@ -287,7 +293,6 @@ class MonitorScreen(ctk.CTkFrame):
                 f"Limits: {len(limits_payload)}"
             )
         )
-
 
     def rebuild_device_groups(self, devices_payload: list[dict]) -> None:
         """
@@ -364,3 +369,20 @@ class MonitorScreen(ctk.CTkFrame):
             self.limits_container.grid_columnconfigure(col, weight=1)
 
             self.limit_cards.append(card)
+    
+    def on_force_tracking(self) -> None:
+        """
+        Called when the user clicks the 'Track data anyway' button
+        in the status banner.
+
+        For now this simply sets a flag in the global data module.
+        The worker can read this flag to start monitoring even if
+        the elapsed time is smaller than the required minimum.
+        """
+        # Create or update a simple flag in the shared data module
+        setattr(data, "force_track_anyway", True)
+
+        # Optional: update summary label just to help debugging
+        current_text = self.summary_label.cget("text")
+        extra = "\nUser requested: track data anyway."
+        self.summary_label.configure(text=current_text + extra)
